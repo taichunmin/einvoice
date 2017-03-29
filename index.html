@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>電子發票條碼產生器</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap-theme.min.css">
+  <link rel="stylesheet" href="chosen/chosen-bootstrap.css">
+  <link rel="stylesheet" href="code39.css">
+  <style media="screen">
+    #canvas {
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <h1 class="text-center">電子發票條碼產生器 for <a href="http://passdock.com/" target="_blank">passdock</a></h1>
+    <div style="font-family:code39; width: 0px; height: 0px; overflow: hidden;">&nbsp;</div>
+    <form @submit.prevent class="form-horizontal">
+      <div class="form-group">
+        <canvas id="canvas" :width="ctxWidth" :height="ctxHeight" style="border: 1px solid #000"></canvas>
+      </div>
+      <div class="form-group">
+        <label for="einvoice" class="col-sm-3 col-lg-2 control-label">共通性載具</label>
+        <div class="col-sm-9 col-lg-10">
+          <input type="text" id="einvoice" class="form-control" v-model="einvoice">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="charity" class="col-sm-3 col-lg-2 control-label">愛心條碼</label>
+        <div class="col-sm-9 col-lg-10">
+          <select-chosen id="charity" :options="charities" v-model="einvoice" ></select-chosen>
+          <span class="help-block">選擇 <strong>愛心條碼</strong> 將會覆蓋 <strong>共通性載具</strong> 的欄位。</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="ctxWidth" class="col-sm-3 col-lg-2 control-label">條碼寬度</label>
+        <div class="col-sm-9 col-lg-10">
+          <input type="number" id="ctxWidth" class="form-control" v-model.number="ctxWidth" min="60">
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="ctxHeight" class="col-sm-3 col-lg-2 control-label">條碼高度</label>
+        <div class="col-sm-9 col-lg-10">
+          <input type="number" id="ctxHeight" class="form-control" v-model.number="ctxHeight">
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-offset-3 col-lg-offset-2 col-sm-9 col-lg-10">
+          <a class="btn btn-success" :href="objurl" download="einvoice.png" :disabled="!objurl">下 載</a>
+        </div>
+      </div>
+    </form>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.2.6/vue.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/1.2.1/vue-resource.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.4/lodash.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/co/4.1.0/index.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.7.0/chosen.jquery.min.js"></script>
+  <script src="chosen/vue-chosen.js"></script>
+  <script type="text/javascript">
+    var vm = new Vue({
+      el: '#app',
+      data() { return {
+        einvoice: '/4ALH+JQ',
+        ctx: null,
+        objurl: '',
+        ctxWidth: 620,
+        ctxHeight: 250,
+        charities: {},
+      };},
+      watch: {
+        einvoice(newEinvoice) {
+          history.pushState(null, null, '#' + newEinvoice);
+          this.updateCanvas();
+        },
+        ctxWidth() {
+          setTimeout(this.ctxInit, 100);
+        },
+        ctxHeight() {
+          setTimeout(this.ctxInit, 100);
+        },
+      },
+      methods: {
+        updateCanvas() {
+          var ctx = this.ctx;
+          var einvoice = '*' + this.einvoice + '*';
+          ctx.clearRect(0, 0, this.ctxWidth, this.ctxHeight);
+          ctx.fillText(einvoice, this.ctxWidth / 2, this.ctxHeight / 2, this.ctxWidth - 60);
+          this.genObjurl();
+        },
+        genObjurl() {
+          var canvas = document.getElementById('canvas');
+          canvas.toBlob((blob) => {
+            if(this.objurl)
+              URL.revokeObjectURL(this.objurl);
+            this.objurl = URL.createObjectURL(blob);
+          });
+        },
+        ctxInit() {
+          this.ctx = document.getElementById('canvas').getContext('2d');
+          var ctx = this.ctx;
+          ctx.font = '1000px code39';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          setTimeout(this.updateCanvas, 1000);
+        },
+      },
+      mounted() {
+        if(/^#\/?[0-9A-Z\-.$+%]+/.test(location.hash)) {
+          this.einvoice = location.hash.slice(1);
+        }
+        this.$http.get('charities.json').then(response => {
+          this.someData = response.body;
+          response.json().then(charities => {
+            this.charities = charities;
+          });
+        }, response => {
+          console.log('load charities.json failed: ' + response);
+        });
+        this.ctxInit();
+      },
+    });
+  </script>
+</body>
+</html>
