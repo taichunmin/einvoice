@@ -65,6 +65,7 @@ Vue.component('select-chosen', {
     },
     emitValue () {
       let value = $(this.$el).val()
+      if (this.multiple && value == null) value = []
       if (this.debug) console.log('emit', value)
       this.$emit('input', value, 1)
     },
